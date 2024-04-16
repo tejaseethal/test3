@@ -1,0 +1,86 @@
+declare @yp int 
+
+
+declare @currentYear int =2024
+declare @pd int =3
+declare @DayFromYearPdWkDAY int =12
+declare @cyp int
+
+set @yp = (select yp from (select *, row_number() over(order by yp desc) rid from (
+select  distinct (Year*100)+pd as YP  from 
+[DBP].[Screens].[tbl_dbp_cal] where (Year*100)+pd<(@currentYear*100)+@pd
+) x
+) x where rid=3)
+
+set @cyp = (select yp from (select *, row_number() over(order by yp desc) rid from (
+select  distinct (Year*100)+pd as YP  from 
+[DBP].[Screens].[tbl_dbp_cal] where (Year*100)+pd<(@currentYear*100)+@pd
+) x
+) x where rid=1)
+
+
+
+SELECT [PD]
+	,[AGG Account]
+	,[PG Account]
+	--,[Category]
+	--,[brand]
+	--,[PPG]
+	,Sum([Cuts]) AS Cuts
+	,SUM([ZA_CUSTGSV]) AS [ZA_CUSTGSV]
+	,SUM([DA_CUSTGSV]) AS [DA_CUSTGSV]
+	,SUM([Z6_CUSTGSV]) AS [Z6_CUSTGSV]
+	,SUM([Z9_CUSTGSV]) AS [Z9_CUSTGSV]
+	,SUM([All Other CutGSV]) AS [All Other CutGSV]
+	,SUM([ZL_CUTGSV]) AS [ZL_CUTGSV]
+	,SUM([ZM_CUTGSV]) AS [ZM_CUTGSV]
+	,SUM([ZK_CUTGSV]) AS [ZK_CUTGSV]
+	,SUM([TI_CutGSV]) AS [TI_CutGSV]
+	,SUM([TF_CutGSV]) AS [TF_CutGSV]
+	,SUM([TB_CutGSV]) AS [TB_CutGSV]
+	,SUM([EA_CutGSV]) AS [EA_CutGSV]
+	,SUM([EB_CutGSV]) AS [EB_CutGSV]
+	,(SUM([Z9_CUSTGSV]) + SUM([TI_CutGSV]) + SUM([TF_CutGSV]) + SUM([TB_CutGSV]) + SUM([EA_CutGSV]) + SUM([EB_CutGSV]) + (Sum([EC_CutGSV])) + (Sum([TD_CutGSV])) + (Sum([TM_CutGSV])) + SUM(ISNULL([DA_CUSTGSV], 0)) + SUM(ISNULL([Z6_CUSTGSV], 0))) AS [Total Quota]
+	,(SUM(ISNULL([Z9_CUSTGSV], 0)) + SUM(ISNULL([TI_CutGSV], 0)) + SUM(ISNULL([DA_CUSTGSV], 0)) + SUM(ISNULL([Z6_CUSTGSV], 0))) AS [Included Quota]
+	,(SUM(ISNULL([ZA_CUSTGSV], 0)) + Sum(isnull([ZL_CUTGSV], 0)) + Sum(isnull([ZM_CUTGSV], 0)) + Sum(isnull([ZK_CUTGSV], 0)) + SUM(ISNULL([DA_CUSTGSV], 0)) + SUM(ISNULL([Z6_CUSTGSV], 0)) + SUM(ISNULL([Z9_CUSTGSV], 0)) + SUM(ISNULL([TI_CutGSV], 0)) + SUM(ISNULL([All Other CutGSV], 0))) AS [AllInclCutGSV]
+	,CASE 
+		WHEN (Sum(isnull([ZOR_OrderQTY_C], 0)) - (Sum(isnull([EA_Cut], 0)) + Sum(isnull([EB_Cut], 0)) + Sum(isnull([TB_Cut], 0)) + Sum(isnull([TF_Cut], 0)) + Sum(isnull([EC_Cut], 0)) + Sum(isnull([TD_Cut], 0)) + Sum(isnull([TM_Cut], 0)))) = 0
+			THEN 0
+		ELSE (Sum([ZOR_Shipped_QTY_C]) / (Sum(isnull([ZOR_OrderQTY_C], 0)) - (Sum(isnull([EA_Cut], 0)) + Sum(isnull([EB_Cut], 0)) + Sum(isnull([TB_Cut], 0)) + Sum(isnull([TF_Cut], 0)) + Sum(isnull([EC_Cut], 0)) + Sum(isnull([TD_Cut], 0)) + Sum(isnull([TM_Cut], 0)))))
+		END AS [Casefill]
+	,(Sum(isnull([ZOR_OrderQTY_C], 0)) - (Sum(isnull([EA_Cut], 0)) + Sum(isnull([EB_Cut], 0)) + Sum(isnull([TB_Cut], 0)) + Sum(isnull([TF_Cut], 0)) + Sum(isnull([EC_Cut], 0)) + Sum(isnull([TD_Cut], 0)) + Sum(isnull([TM_Cut], 0)))) AS [Denom_Casefill]
+	,(Sum(isnull([ZOR_OrderedGSV_C], 0)) - (Sum(isnull([EA_CutGSV], 0)) + Sum(isnull([EB_CutGSV], 0)) + Sum(isnull([TB_CutGSV], 0)) + Sum(isnull([TF_CutGSV], 0)) + Sum(isnull([EC_CutGSV], 0)) + Sum(isnull([TD_CutGSV], 0)) + Sum(isnull([TM_CutGSV], 0)))) AS [Adjusted Ordered]
+	,(Sum(isnull([ZOR_OrderQTY_C], 0)) - (Sum(isnull([EA_Cut], 0)) + Sum(isnull([EB_Cut], 0)) + Sum(isnull([TB_Cut], 0)) + Sum(isnull([TF_Cut], 0)) + Sum(isnull([EC_Cut], 0)) + Sum(isnull([TD_Cut], 0)) + Sum(isnull([TM_Cut], 0)))) AS [Adjusted Ordered Qty]
+	,SUM([ZOR_Shipped_GSV]) AS [Actual]
+	,Sum([ZOR_OrderedGSV_C]) AS GSVOrdered_C
+	,SUM([ZOR_Shipped_QTY]) AS [Actual Shipments Qty]
+	,Sum([ZOR_OrderQTY_C]) AS OrderedQty_C
+	,SUM(isnull([ZOR_Shipped_QTY_C], 0)) AS [ZOR_Shipped_QTY_C]
+	,SUM([EC_CutGSV]) AS [EC_CUSTGSV]
+	,SUM(TD_CutGSV) AS [TD_CUSTGSV]
+	,SUM(TM_CutGSV) AS [TM_CUSTGSV]
+	,SUM([ZA_CUSTGSV]) + Sum(isnull([ZL_CUTGSV], 0)) + Sum(isnull([ZM_CUTGSV], 0)) + Sum(isnull([ZK_CUTGSV], 0)) + SUM([DA_CUSTGSV]) + SUM([Z6_CUSTGSV]) + SUM([Z9_CUSTGSV]) + SUM([TI_CutGSV]) + SUM([All Other CutGSV]) AS [Include Total Cuts]
+	,(SUM([TF_CutGSV]) + SUM([TB_CutGSV]) + SUM([EA_CutGSV]) + SUM([EB_CutGSV]) + (Sum([EC_CutGSV])) + (Sum([TD_CutGSV])) + (Sum([TM_CutGSV]))) AS [Exclude Total Cuts]
+	,Sum([EA_Cut]) AS [EA_Cut]
+	,Sum([EB_Cut]) AS [EB_Cut]
+	,Sum([TB_Cut]) AS [TB_Cut]
+	,Sum([TF_Cut]) AS [TF_Cut]
+	,Sum([EC_Cut]) AS [EC_Cut]
+	,Sum([TD_Cut]) AS [TD_Cut]
+	,Sum([TM_Cut]) AS [TM_Cut]
+FROM [DBP].[Screens].[vw_tbl_dbp_screen_PPG]
+WHERE (YEAR*100)+PD between @yp and  @cyp
+	AND DayFromRunday = '20'
+	and DayFromYearPdWkDAY=@DayFromYearPdWkDAY
+	AND [PG Account] IS NOT NULL
+GROUP BY [PD]
+	,[AGG Account]
+	,[PG Account]
+	--,[Category]
+	--,[brand]
+	--,[PPG]
+ORDER BY [Include Total Cuts] DESC
+
+
+
+
